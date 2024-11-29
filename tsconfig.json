@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ESNext", // Use modern ECMAScript features
+    "module": "NodeNext", // ES module syntax for modern environments
+    "moduleResolution": "nodenext", // Resolve modules in the Node.js style
+    "strict": true, // Enable all strict type-checking options
+    "esModuleInterop": true, // Enable compatibility for CommonJS modules
+    "forceConsistentCasingInFileNames": true, // Enforce consistent file name casing
+    "skipLibCheck": true, // Skip type checking of declaration files
+    "rootDir": "./src", // Root directory of source files
+    "resolveJsonModule": true, // Allow importing JSON files
+    "typeRoots": ["./node_modules/@types"], // Include type definitions from node_modules
+    "lib": ["ESNext"], // Include libraries for modern JavaScript and browser APIs
+    "noEmit": true,
+    "allowImportingTsExtensions": true
+  },
+  "include": [
+    "src/**/*.ts", // Include all TypeScript files in the src directory
+    "src/**/*.d.ts" // Include type declaration files
+  ],
+  "exclude": [
+    "node_modules", // Exclude dependencies
+    "dist", // Exclude the build output folder
+    "**/*.test.ts", // Optionally exclude test files
+    "**/*.spec.ts" // Optionally exclude spec files
+  ]
+}

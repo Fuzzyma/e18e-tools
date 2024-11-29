@@ -1,0 +1,22 @@
+{
+  "name": "e18e-tools",
+  "type": "module",
+  "dependencies": {
+    "picocolors": "^1.1.1",
+    "picospinner": "^2.0.0",
+    "tsx": "^4.19.2",
+    "yargs": "^17.7.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "@types/yargs": "^17.0.33"
+  },
+  "bin": {
+    "e18e-tools": "./src/getDependents.ts",
+    "format": "./src/format.ts"
+  },
+  "scripts": {
+    "get": "bun ./src/getDependents.ts -U http://localhost:5984/registry2 -u admin -p admin",
+    "format": "bun ./src/format.ts"
+  }
+}

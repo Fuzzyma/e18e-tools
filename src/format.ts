@@ -2,7 +2,6 @@
 
 import pc from "picocolors";
 import fs from "fs";
-import path from "path";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 

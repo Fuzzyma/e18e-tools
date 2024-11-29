@@ -7,6 +7,7 @@ import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import { fetchWithProgress } from "./utils/fetch-with-progress.ts";
 import { Spinner } from "picospinner";
+import semver from "semver";
 
 const argv = await yargs(hideBin(process.argv))
   .option("number", {
@@ -119,13 +120,25 @@ interface NpmPackageInfo {
   };
 }
 
-interface LocalDependendsResponse {
+interface LocalDependendsResponseDev {
   total_rows: number;
   offset: number;
 
   rows: {
+    id: string;
     key: string;
     value: string;
+  }[];
+}
+
+interface LocalDependendsResponseProd {
+  total_rows: number;
+  offset: number;
+
+  rows: {
+    id: string;
+    key: string;
+    value: { name: string; version: string };
   }[];
 }
 
@@ -160,9 +173,9 @@ function formatTraffic(bytes: number): string {
 
 async function fetchPackageInfo(
   packageName: string,
-  version?: string
+  version = "latest"
 ): Promise<NpmPackageInfo | null> {
-  const url = `${npmRegistryBaseUrl}/${packageName}/${version || "latest"}`;
+  const url = `${npmRegistryBaseUrl}/${packageName}/${version}`;
   try {
     const response = await fetch(url);
     if (!response.ok) {
@@ -181,7 +194,7 @@ async function fetchDependents(
   dev = false,
   quiet = false
 ) {
-  const deps = dev ? "dev-dependencies" : "dependents";
+  const deps = dev ? "dev-dependencies" : "dependents2";
   const url = `${localCouchdbUrl}/_design/dependents/_view/${deps}?key="${packageName}"`;
 
   const spinner = new Spinner("Fetching dependent packages...");
@@ -207,7 +220,9 @@ async function fetchDependents(
     throw new Error(`HTTP error! Status: ${response.status}`);
   }
 
-  const data = (await response.json()) as LocalDependendsResponse;
+  const data = (await response.json()) as
+    | LocalDependendsResponseDev
+    | LocalDependendsResponseProd;
 
   if (!quiet) {
     spinner.succeed(
@@ -215,7 +230,19 @@ async function fetchDependents(
     );
   }
 
-  return data.rows;
+  if (data.rows.length && typeof data.rows[0].value === "string") {
+    return data.rows.map((p) => {
+      return {
+        ...p,
+        value: {
+          name: p.key,
+          version: "",
+        },
+      };
+    });
+  }
+
+  return data.rows as LocalDependendsResponseProd["rows"];
 }
 
 async function fetchDownloadStats(packageNames: string[], quiet = false) {
@@ -274,16 +301,21 @@ function showProgress(current: number, total: number, message: string): void {
   );
 }
 
-const getnameAndVersion = (inputPackage: string) => {
+const getnameAndVersion = (
+  inputPackage: string
+): [string, string | undefined] => {
   const scoped = inputPackage.startsWith("@");
 
-  let [packageName, version] = inputPackage.split("@");
+  let [packageName, version] = inputPackage.split("@") as [
+    string,
+    string | undefined
+  ];
 
   if (scoped) {
     const atPosition = inputPackage.lastIndexOf("@");
     if (atPosition === 0) {
       packageName = inputPackage;
-      version = "latest";
+      version = undefined;
     } else {
       packageName = inputPackage.slice(0, atPosition);
       version = inputPackage.slice(atPosition + 1);
@@ -299,6 +331,7 @@ type Results = {
   traffic: number;
   isDevDependency: boolean;
   children: Results[];
+  version: string;
 };
 
 function printOutput(results: Results[], spaces = "") {
@@ -322,6 +355,11 @@ function printOutput(results: Results[], spaces = "") {
 
   const maxNameWidth = results.reduce((a, b) => Math.max(a, b.name.length), 0);
 
+  const maxVersionWidth = Math.min(
+    results.reduce((a, b) => Math.max(a, b.version.length), 0),
+    10
+  );
+
   results.forEach((pkg, index) => {
     const indexStr = `${index + 1}`.padEnd(maxIndexWidth);
     const downloadsStr = formatDownloads(pkg.downloads).padStart(
@@ -331,18 +369,19 @@ function printOutput(results: Results[], spaces = "") {
       ? formatTraffic(pkg.traffic).padStart(maxTrafficWidth)
       : "".padStart(maxTrafficWidth);
     const nameStr = pkg.name.padEnd(maxNameWidth);
+    const versionStr = pkg.version.slice(0, 10).padEnd(maxVersionWidth);
     const npmLink = `https://npmjs.com/${pkg.name}`;
 
     if (argv.output === "md") {
       console.log(
-        `| ${indexStr} | ${downloadsStr} | ${trafficStr} | [${pkg.name}](https://npmjs.com/${pkg.name}) |`
+        `| ${indexStr} | ${downloadsStr} | ${trafficStr} | ${versionStr} | [${pkg.name}](https://npmjs.com/${pkg.name}) |`
       );
     } else {
       console.log(
         spaces,
         `${pc.green(`#${indexStr}`)} ${pc.magenta(downloadsStr)} ⬇️ , ${pc.red(
           trafficStr
-        )} - ${pc.yellow(nameStr)} ${npmLink}`
+        )} - ${pc.yellow(nameStr)} ${pc.blue(versionStr)} ${npmLink}`
       );
 
       if (pkg.children.length > 0) {
@@ -391,11 +430,18 @@ async function main(inputPackage: string, depths = 0, quiet = false) {
     );
   }
 
-  const dependents = await fetchDependents(
+  const dependentsWithVersion = await fetchDependents(
     packageName,
     argv.dev,
     quiet || argv.list
   );
+
+  const dependents = dependentsWithVersion.filter((dependent) => {
+    return (
+      // Dont filter when no version was given
+      !version || semver.satisfies(actualVersion, dependent.value.version)
+    );
+  });
 
   if (argv.list) {
     dependents.forEach((d) => {
@@ -405,16 +451,17 @@ async function main(inputPackage: string, depths = 0, quiet = false) {
   }
 
   const downloadStats = await fetchDownloadStats(
-    dependents.map((p) => p.value),
+    dependents.map((p) => p.value.name),
     quiet
   );
 
   const results = dependents.map((dep): Results => {
-    const downloads = downloadStats[dep.value] ?? 0;
+    const downloads = downloadStats[dep.value.name] ?? 0;
     const traffic = downloads * (packageInfo.dist?.size ?? 0);
 
     return {
-      name: dep.value,
+      name: dep.value.name,
+      version: dep.value.version,
       downloads,
       traffic,
       isDevDependency: argv.dev ?? false,
@@ -476,7 +523,7 @@ async function main(inputPackage: string, depths = 0, quiet = false) {
   } else {
     if (argv.output === "md") {
       console.log(
-        `| # | Dev | Downloads | Traffic | Package |\n|---|---|---|---|---|`
+        `| # | Downloads | Traffic | Version | Package |\n|---|---|---|---|---|`
       );
     }
 

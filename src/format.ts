@@ -54,8 +54,12 @@ async function main() {
   let topResults: DependentPackage[] = [];
 
   // check if file is json file and read it as json
-  if (path.extname(fileName) === ".json") {
+  try {
     topResults = JSON.parse(fs.readFileSync(fileName, "utf-8"));
+  } catch (e) {
+    console.error(pc.red(`Failed to read file ${fileName}`));
+    console.log(e);
+    process.exit(1);
   }
 
   if (argv.format === "md") {

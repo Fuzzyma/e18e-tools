@@ -538,4 +538,4 @@ if (!inputPackage) {
   process.exit(1);
 }
 
-main(inputPackage, argv.depths, argv.quiet);
+main(inputPackage, argv.depths, argv.quiet).catch(console.error);

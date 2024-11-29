@@ -1,3 +1,7 @@
+To learn more about the e18e project, visit [e18e.dev](https://e18e.dev).
+
+To use this tool, you probably want to checkout our discord first: https://discord.gg/55uaCGGH
+
 ```sh
 npx github:Fuzzyma/e18e-tools --help
 ```

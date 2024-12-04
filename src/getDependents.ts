@@ -235,7 +235,7 @@ async function fetchDependents(
       return {
         ...p,
         value: {
-          name: p.key,
+          name: p.id,
           version: "",
         },
       };

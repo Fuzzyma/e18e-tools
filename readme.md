@@ -1,6 +1,7 @@
 To learn more about the e18e project, visit [e18e.dev](https://e18e.dev).
+The [cleanup-section](https://e18e.dev/guide/cleanup.html) contains a couchdb instance that you can use.
 
-To use this tool, you probably want to checkout our discord first: https://discord.gg/55uaCGGH
+If you need help, visit our [discord](https://chat.e18e.dev/) or text me on [bluesky](https://bsky.app/profile/fuzzyma.bsky.social).
 
 ```sh
 npx github:Fuzzyma/e18e-tools --help

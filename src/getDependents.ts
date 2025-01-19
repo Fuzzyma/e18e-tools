@@ -8,6 +8,7 @@ import { hideBin } from "yargs/helpers";
 import { fetchWithProgress } from "./utils/fetch-with-progress.ts";
 import { Spinner } from "picospinner";
 import semver from "semver";
+import { escapeMdTable } from "./utils/escape-md-table.ts";
 
 const argv = await yargs(hideBin(process.argv))
   .option("number", {
@@ -357,7 +358,7 @@ function printOutput(results: Results[], spaces = "") {
 
   const maxVersionWidth = Math.min(
     results.reduce((a, b) => Math.max(a, b.version.length), 0),
-    10
+    16
   );
 
   results.forEach((pkg, index) => {
@@ -369,12 +370,12 @@ function printOutput(results: Results[], spaces = "") {
       ? formatTraffic(pkg.traffic).padStart(maxTrafficWidth)
       : "".padStart(maxTrafficWidth);
     const nameStr = pkg.name.padEnd(maxNameWidth);
-    const versionStr = pkg.version.slice(0, 10).padEnd(maxVersionWidth);
+    const versionStr = pkg.version.slice(0, 16).padEnd(maxVersionWidth);
     const npmLink = `https://npmjs.com/${pkg.name}`;
 
     if (argv.output === "md") {
       console.log(
-        `| ${indexStr} | ${downloadsStr} | ${trafficStr} | ${versionStr} | [${pkg.name}](https://npmjs.com/${pkg.name}) |`
+        escapeMdTable`| ${indexStr} | ${downloadsStr} | ${trafficStr} | ${versionStr} | [${pkg.name}](https://npmjs.com/${pkg.name}) |`
       );
     } else {
       console.log(

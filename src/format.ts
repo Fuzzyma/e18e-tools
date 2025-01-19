@@ -4,6 +4,7 @@ import pc from "picocolors";
 import fs from "fs";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
+import { escapeMdTable } from "./utils/escape-md-table.ts";
 
 const argv = await yargs(hideBin(process.argv))
   .option("format", {
@@ -27,6 +28,7 @@ interface DependentPackage {
   traffic?: number;
   isDevDependency: boolean;
   error: boolean;
+  version: string;
 }
 
 function formatDownloads(downloads: number): string {
@@ -85,6 +87,11 @@ async function main() {
     0
   );
 
+  const maxVersionWidth = Math.min(
+    topResults.reduce((a, b) => Math.max(a, b.version.length), 0),
+    16
+  );
+
   topResults.slice(0, argv.number).forEach((pkg, index) => {
     const indexStr = `${index + 1}`.padEnd(maxIndexWidth);
     const downloadsStr = formatDownloads(pkg.downloads).padStart(
@@ -94,11 +101,12 @@ async function main() {
       ? formatTraffic(pkg.traffic).padStart(maxTrafficWidth)
       : "".padStart(maxTrafficWidth);
     const nameStr = pkg.name.padEnd(maxNameWidth);
+    const versionStr = pkg.version.slice(0, 16).padEnd(maxVersionWidth);
     const npmLink = `https://npmjs.com/${pkg.name}`;
 
     if (argv.format === "md") {
       console.log(
-        `| ${indexStr} | ${downloadsStr} | ${trafficStr} | [${pkg.name}](https://npmjs.com/${pkg.name}) |`
+        escapeMdTable`| ${indexStr} | ${downloadsStr} | ${trafficStr} | ${versionStr} | [${pkg.name}](https://npmjs.com/${pkg.name}) |`
       );
     } else {
       console.log(
